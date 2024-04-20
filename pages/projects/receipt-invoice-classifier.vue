@@ -18,6 +18,7 @@ useHead({
 const image = ref<string | ArrayBuffer | null>(null);
 const model = ref<tf.GraphModel<string | tf.io.IOHandler> | null>(null);
 const classification = ref<"receipt" | "invoice" | null>(null);
+const isLoading = ref(false);
 onMounted(async () => {
   const modelUrl = "/receipt-or-invoice/model.json";
   model.value = await tf.loadGraphModel(modelUrl);
@@ -42,10 +43,10 @@ const handleFileSelect = (event: Event) => {
         .toFloat()
         .expandDims();
       tf.tidy(() => {
+        isLoading.value = true;
         const rawModel = toRaw(model.value);
         const normalizedImage = tensorImg.div(255);
         const result = rawModel?.predict(normalizedImage);
-
         if (result) {
           //@ts-ignore
           const predictions = result.dataSync()[0];
@@ -56,6 +57,7 @@ const handleFileSelect = (event: Event) => {
           } else {
             classification.value = "invoice";
           }
+          isLoading.value = false;
         }
       });
     };
@@ -85,6 +87,9 @@ const handleFileSelect = (event: Event) => {
             />
             <img width="400" v-if="image" :src="image?.toString()" />
           </div>
+          <h2 v-if="isLoading" class="text-2xl mt-5 lg:mt-0">
+            Loading result...
+          </h2>
           <h2 v-if="classification" class="text-2xl mt-5 lg:mt-0">
             Classification:
             <span class="text-green-400">{{ classification }}</span>
